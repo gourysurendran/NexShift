@@ -1,98 +1,46 @@
 NexShift – Intelligent Workforce Optimization
 
-An AI-Based Employee Shift Scheduling Optimization System developed using Python, Flask, Linear Programming, and PuLP.
+An automated workforce optimization and employee shift scheduling system built using Python, Flask, and Mixed-Integer Linear Programming (MILP) with the PuLP optimization library.
+
+NexShift is designed to solve real-world workforce scheduling challenges such as uneven workload distribution, overtime management, staffing constraints, and fair shift allocation through mathematical optimization techniques.
 
 
 ---
 
-Live Demo
+🚀 Live Demo
 
-NexShift Live Demo
-
-
----
-
-Overview
-
-NexShift is a workforce optimization system designed to automate employee shift scheduling using Artificial Intelligence and Mathematical Optimization techniques.
-
-The application allocates employees to Morning, Evening, and Night shifts while considering organizational constraints such as workload balancing, overtime reduction, employee availability, and fair shift distribution.
-
-The scheduling engine uses Mixed-Integer Linear Programming (MILP) with the PuLP optimization library to generate optimized workforce schedules that improve operational efficiency and resource utilization.
+🌐 https://nexshift.onrender.com
 
 
 ---
 
-Features
+📌 Features
 
-Automated Employee Shift Scheduling
+✅ Automated employee shift scheduling
 
-Morning, Evening, and Night Shift Allocation
+✅ Mixed-Integer Linear Programming (MILP) optimization
 
-Constraint-Based Workforce Optimization
+✅ Workload balancing and fair shift allocation
 
-Workload Balancing
+✅ Overtime minimization
 
-Overtime Reduction
+✅ Employee availability management
 
-Employee Availability Handling
+✅ Staffing constraint validation
 
-Workforce Analytics Dashboard
+✅ Morning, Evening, and Night shift assignment
 
-Shift Distribution Visualization
+✅ Interactive analytics dashboard
 
-Excel Dataset Upload
+✅ Excel upload and optimized schedule export
 
-Optimized Schedule Export to Excel
-
-Responsive User Interface
+✅ Responsive web interface
 
 
 
 ---
 
-Shift Timings
-
-| Shift Type | Login Time | Logout Time |
-
-|------------|------------|-------------|
-
-| Morning Shift | 6:00 AM | 2:00 PM |
-
-| Evening Shift | 2:00 PM | 10:00 PM |
-
-| Night Shift | 10:00 PM | 6:00 AM |
-
-| Off Day | — | — |
-
-
----
-
-Optimization Constraints
-
-The scheduling model considers:
-
-Maximum 8 working hours per day
-
-Maximum 40 working hours per week
-
-One shift per employee per day
-
-Fair workload distribution
-
-Overtime minimization
-
-Minimum staffing requirements
-
-Employee availability constraints
-
-No consecutive night shifts
-
-
-
----
-
-Technologies Used
+🛠️ Technologies Used
 
 Backend
 
@@ -116,147 +64,173 @@ JavaScript
 Chart.js
 
 
+Optimization Technique
+
+Mixed-Integer Linear Programming (MILP)
+
+
 
 ---
 
-Project Structure
+⚙️ How It Works
+
+The system takes:
+
+Employee details
+
+Availability information
+
+Shift requirements
+
+Staffing constraints
+
+
+It then processes the data using a MILP optimization model to generate optimized employee schedules while satisfying operational constraints and balancing workforce distribution.
+
+
+---
+
+📊 Optimization Objectives
+
+NexShift focuses on:
+
+Minimizing overtime
+
+Balancing employee workload
+
+Ensuring fair shift distribution
+
+Maintaining staffing coverage requirements
+
+Improving scheduling efficiency
+
+
+
+---
+
+📷 Project Preview
+
+Add screenshots of your dashboard, schedule generation page, analytics graphs, and export functionality here.
+
+Example:
+
+![Dashboard Screenshot](images/dashboard.png)
+
+
+---
+
+📂 Project Structure
 
 NexShift/
-  
 │
-  
 ├── app.py
-  
-├── optimization.py
-  
-├── requirements.txt
-  
-├── README.md
-  
-│
-  
-├── data/
-  
-├── uploads/
-  
 ├── templates/
-  
-│     └── index.html
-  
-│
-  
 ├── static/
-  
-│
-  
-└── screenshots/
+├── uploads/
+├── exports/
+├── requirements.txt
+└── README.md
 
 
 ---
 
-Installation
+▶️ Installation & Setup
 
-Clone the repository:
+1️⃣ Clone the Repository
 
 git clone https://github.com/gourysurendran/NexShift.git
-
-Navigate to the project directory:
-
 cd NexShift
 
-Install the required dependencies:
+2️⃣ Create Virtual Environment
+
+python -m venv venv
+
+3️⃣ Activate Virtual Environment
+
+Windows
+
+venv\Scripts\activate
+
+Mac/Linux
+
+source venv/bin/activate
+
+4️⃣ Install Dependencies
 
 pip install -r requirements.txt
 
-
----
-
-Run the Application
+5️⃣ Run the Application
 
 python app.py
 
-The application will run locally at:
 
-http://127.0.0.1:5000
+---
+
+🌍 Deployment
+
+The project is deployed using Render.
 
 
 ---
 
-System Workflow
+🧠 Learning Outcomes
 
-1. Upload employee dataset
+This project helped in understanding and applying:
 
+Operations Research concepts
 
-2. Generate optimized schedule
+Workforce optimization techniques
 
+Linear Programming & MILP
 
-3. Apply scheduling constraints
+Constraint-based scheduling
 
+Backend web development with Flask
 
-4. Allocate employee shifts automatically
-
-
-5. Display workforce analytics
-
-
-6. Export optimized schedule
-
-
-
-
----
-
-Screenshots
-
-Dashboard
-
-
-
-Optimized Shift Schedule
-
-
-
-Workforce Analytics
-
+Data visualization and dashboard integration
 
 
 
 ---
 
-Output
+🔮 Future Improvements
 
-The system generates:
+User authentication system
 
-Optimized employee shift schedules
+Employee preference handling
 
-Workforce analytics reports
+AI-based demand forecasting
 
-Shift distribution insights
+Multi-location workforce management
 
-Overtime reports
+Cloud database integration
 
-Downloadable Excel schedules
-
-
-
----
-
-Future Enhancements
-
-Employee Preference-Based Scheduling
-
-Leave Management Integration
-
-Cloud Deployment Support
-
-Mobile Application Support
-
-Real-Time Notifications
+Admin analytics enhancements
 
 
 
 ---
 
-License
+🤝 Contributing
 
-This project is developed for educational purposes 
+Contributions, suggestions, and improvements are welcome.
+
+Feel free to fork the repository and submit a pull request.
+
+
+---
+
+📬 Contact
+
+👩‍💻 Developer
+
+Goury Surendran
+
+💻 GitHub: Goury Surendran GitHub Profile
+
+
+---
+
+⭐ Support
+
+If you found this project useful, consider giving it a ⭐ on GitHub!

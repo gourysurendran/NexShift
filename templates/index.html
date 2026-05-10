@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexShift | Smart Employee Scheduling</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #ec4899;
+            --bg: #0f172a;
+            --surface: rgba(30, 41, 59, 0.7);
+            --surface-hover: rgba(30, 41, 59, 0.9);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,0.2) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,0.2) 0, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        header {
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        h2 {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            font-weight: 300;
+        }
+
+        main {
+            flex: 1;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .glass-panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+            flex-wrap: wrap;
+        }
+
+        .file-upload-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-upload-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            height: 100%;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px -10px rgba(99, 102, 241, 0.6);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            box-shadow: none;
+        }
+
+        .btn-outline:hover {
+            background: rgba(99, 102, 241, 0.1);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 15px 25px -10px rgba(236, 72, 153, 0.6);
+        }
+
+        .btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        .btn.loading .btn-text { display: none; }
+        .btn.loading .spinner { display: block; }
+
+        #results { display: none; animation: fadeIn 0.8s ease-out; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(15, 23, 42, 0.5);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value.optimal { color: var(--success); }
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Charts & Extras Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-container {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.05);
+            min-height: 300px;
+        }
+
+        .extra-workers-card {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.05);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .extra-workers-card h3 {
+            color: var(--warning);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .worker-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .worker-name { font-weight: 600; }
+        .worker-ot { 
+            background: rgba(245, 158, 11, 0.2); 
+            color: var(--warning); 
+            padding: 0.2rem 0.6rem; 
+            border-radius: 12px; 
+            font-size: 0.85rem; 
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header h3 {
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 1rem 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        th {
+            background: rgba(0,0,0,0.2);
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .cell-interactive {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .cell-interactive:hover {
+            transform: scale(1.05);
+        }
+
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+            text-align: center;
+            min-width: 60px;
+        }
+
+        .status-working {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .status-morning {
+            background: rgba(56, 189, 248, 0.1);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        .status-evening {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .status-night {
+            background: rgba(139, 92, 246, 0.1);
+            color: #8b5cf6;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .status-off {
+            background: rgba(148, 163, 184, 0.1);
+            color: var(--text-muted);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        footer {
+            text-align: center;
+            padding: 3rem;
+            margin-top: auto;
+            color: var(--text-muted);
+            animation: fadeIn 1s ease-out 0.5s both;
+        }
+
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+        @media (max-width: 900px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>NexShift</h1>
+        <h2>Intelligent Workforce Optimization</h2>
+    </header>
+
+    <main>
+        <div class="controls">
+            <div class="file-upload-wrapper">
+                <button class="btn btn-outline" id="uploadLabelBtn">
+                    <span id="fileName">📁 Default Dataset</span>
+                </button>
+                <input type="file" id="fileInput" accept=".xlsx, .xls" onchange="updateFileName(this)">
+            </div>
+
+            <button id="optimizeBtn" class="btn" onclick="runOptimization()">
+                <span class="btn-text">Generate Optimized Schedule</span>
+                <div class="spinner"></div>
+            </button>
+        </div>
+
+        <div id="results" style="display: none;">
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div id="statStatus" class="stat-value optimal">-</div>
+                    <div class="stat-label">Status</div>
+                </div>
+                <div class="stat-card">
+                    <div id="statShifts" class="stat-value">-</div>
+                    <div class="stat-label">Total Shifts</div>
+                </div>
+                <div class="stat-card">
+                    <div id="statHours" class="stat-value">-</div>
+                    <div class="stat-label">Total Hours</div>
+                </div>
+                <div class="stat-card">
+                    <div id="statSlack" class="stat-value">-</div>
+                    <div class="stat-label">Overtime Hours</div>
+                </div>
+                <div class="stat-card" style="grid-column: 1 / -1; padding: 1rem;">
+                    <div class="stat-label" style="margin-bottom: 1rem; text-align: center; font-size: 1rem;">Shift Distribution (Total Assigned)</div>
+                    <div style="display: flex; justify-content: space-around;">
+                        <div><div class="stat-value" id="statMorning" style="font-size: 1.5rem;">-</div><div class="stat-label">Morning</div></div>
+                        <div><div class="stat-value" id="statEvening" style="font-size: 1.5rem;">-</div><div class="stat-label">Evening</div></div>
+                        <div><div class="stat-value" id="statNight" style="font-size: 1.5rem;">-</div><div class="stat-label">Night</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="chart-container" style="grid-column: 1 / -1; min-height: auto;">
+                    <h3 style="margin-bottom: 1rem; color: var(--text-muted); font-size: 1rem; text-transform: uppercase;">Workload Distribution</h3>
+                    <div style="position: relative; height: 220px; width: 100%;">
+                        <canvas id="workloadChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="extra-workers-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <h3 style="color: var(--success); margin: 0;">✅ Who Can Work Extra</h3>
+                        <button class="btn btn-outline" style="padding: 0.4rem 1rem; font-size: 0.85rem;" onclick="adminAssignShift()">+ Schedule</button>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Employees who didn't meet their max work time</p>
+                    <div id="availableWorkersList">
+                        <!-- Available workers injected here -->
+                    </div>
+                </div>
+                <div class="extra-workers-card">
+                    <h3 style="margin-bottom: 0.5rem;">⚠️ Who Worked Extra</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Employees who worked more than their regular hours</p>
+                    <div id="extraWorkersList">
+                        <!-- Extra workers injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel">
+                <div class="section-header">
+                    <h3>Employee Schedule <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">(Click badges to view shift details)</span></h3>
+                    <button class="btn btn-outline" onclick="saveAndDownload()" style="padding: 0.6rem 1.5rem; font-size: 0.9rem;">
+                        💾 Save & Download Excel
+                    </button>
+                </div>
+                
+                <div class="table-container">
+                    <table id="scheduleTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Group</th>
+                                <th>Sun</th>
+                                <th>Mon</th>
+                                <th>Tue</th>
+                                <th>Wed</th>
+                                <th>Thu</th>
+                                <th>Fri</th>
+                                <th>Sat</th>
+                                <th>Total Hrs</th>
+                                <th>OT</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Assignment Modal -->
+    <div id="assignmentModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="glass-panel" style="width: 900px; max-width: 95%; max-height: 90vh; display: flex; flex-direction: column; margin-bottom: 0; padding: 2rem;">
+            <h3 style="color: var(--primary); margin-bottom: 0.5rem;">Bulk Schedule Extra Shifts</h3>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">Tick multiple employees and select their shifts to schedule them all at once.</p>
+            
+            <div style="overflow-y: auto; flex: 1; margin-bottom: 1.5rem;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; background: rgba(0,0,0,0.1); border-radius: 8px;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); width: 60px;">Select</th>
+                            <th style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">Employee Name</th>
+                            <th style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">Date</th>
+                            <th style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">Day</th>
+                            <th style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">Shift Type</th>
+                            <th style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">Login Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bulkScheduleBody">
+                        <!-- Rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <button class="btn btn-outline" style="padding: 0.6rem 1.5rem;" onclick="closeModal()">Cancel</button>
+                <button class="btn" style="padding: 0.6rem 1.5rem;" onclick="saveBulkAssignments()">Schedule Selected</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Crafted with ❤️ by Goury Surendran</p>
+    </footer>
+
+    <script>
+        const SHIFT_HOURS = 8;
+        let workloadChartInstance = null;
+        let currentAvailableWorkers = [];
+
+        function updateFileName(input) {
+            const fileName = input.files[0] ? input.files[0].name : '📁 Default Dataset';
+            document.getElementById('fileName').textContent = fileName;
+        }
+
+        async function runOptimization() {
+            const btn = document.getElementById('optimizeBtn');
+            const fileInput = document.getElementById('fileInput');
+            const resultsDiv = document.getElementById('results');
+            
+            btn.classList.add('loading');
+            btn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                if (fileInput.files.length > 0) {
+                    formData.append('file', fileInput.files[0]);
+                }
+
+                const response = await fetch('/api/optimize', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+
+                renderResults(data);
+                resultsDiv.style.display = 'block';
+
+            } catch (error) {
+                alert('An error occurred. Check console for details.');
+                console.error(error);
+            } finally {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+
+        function renderResults(data) {
+            // Update Stats
+            document.getElementById('statStatus').textContent = data.status;
+            document.getElementById('statShifts').textContent = data.total_shifts;
+            document.getElementById('statHours').textContent = data.total_hours;
+            document.getElementById('statSlack').textContent = data.total_ot;
+
+            // Shift Distribution
+            if(data.shift_counts) {
+                document.getElementById('statMorning').textContent = data.shift_counts.Morning || 0;
+                document.getElementById('statEvening').textContent = data.shift_counts.Evening || 0;
+                document.getElementById('statNight').textContent = data.shift_counts.Night || 0;
+            }
+
+            // Render Extra Workers (Overtime)
+            const extraList = document.getElementById('extraWorkersList');
+            extraList.innerHTML = '';
+            if (data.extra_workers && data.extra_workers.length === 0) {
+                extraList.innerHTML = '<p style="color: var(--success); padding: 1rem 0;">No employees are working overtime!</p>';
+            } else if (data.extra_workers) {
+                data.extra_workers.forEach(w => {
+                    extraList.innerHTML += `
+                        <div class="worker-item">
+                            <div>
+                                <div class="worker-name">${w.Name}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted);">Group ${w.Group}</div>
+                            </div>
+                            <div class="worker-ot">+${w.OT} hrs</div>
+                        </div>
+                    `;
+                });
+            }
+
+            // Render Available Workers (Undertime/Slack)
+            const availableList = document.getElementById('availableWorkersList');
+            availableList.innerHTML = '';
+            
+            currentAvailableWorkers = data.available_workers || [];
+            
+            if (currentAvailableWorkers.length === 0) {
+                availableList.innerHTML = '<p style="color: var(--success); padding: 1rem 0;">No employees have extra availability!</p>';
+            } else {
+                let chipsHtml = '<div style="display: flex; flex-wrap: wrap; gap: 0.8rem;">';
+                currentAvailableWorkers.forEach(w => {
+                    chipsHtml += `
+                        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 0.5rem 1rem; border-radius: 50px; display: flex; align-items: center; gap: 0.5rem;">
+                            <strong style="color: var(--text-main); font-size: 0.95rem;">${w.Name}</strong>
+                            <span style="color: var(--success); font-size: 0.85rem;">(${w.Available}h left)</span>
+                        </div>
+                    `;
+                });
+                chipsHtml += '</div>';
+                availableList.innerHTML = chipsHtml;
+            }
+
+            // Render Chart
+            renderChart(data.group_hours);
+
+            // Render Table
+            const tbody = document.querySelector('#scheduleTable tbody');
+            tbody.innerHTML = '';
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            
+            data.schedule.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.id = `row-${index}`;
+                tr.dataset.maxH = row.Max_Hours;
+                
+                let html = `
+                    <td><strong>${row.Name}</strong></td>
+                    <td>${row.Group_code}</td>
+                `;
+
+                days.forEach(day => {
+                    const shiftValue = row[day];
+                    const isWorking = shiftValue !== 'Off';
+                    
+                    let badgeClass = 'status-off';
+                    if (shiftValue === 'Morning') badgeClass = 'status-morning';
+                    else if (shiftValue === 'Evening') badgeClass = 'status-evening';
+                    else if (shiftValue === 'Night') badgeClass = 'status-night';
+                    else if (isWorking) badgeClass = 'status-working'; // Fallback
+                    
+                    const text = shiftValue;
+                    
+                    // Fetch assignment details for this employee on this day
+                    const assignmentKey = `${row.Name}_${day}`;
+                    const assignment = data.shift_assignments && data.shift_assignments[assignmentKey];
+                    let assignmentDataStr = '';
+                    if (assignment) {
+                        assignmentDataStr = `data-type="${assignment.Type}" data-login="${assignment.Login}" data-logout="${assignment.Logout}"`;
+                    }
+                    
+                    html += `
+                        <td class="cell-interactive" onclick="showShiftDetails(this)">
+                            <span class="status-badge ${badgeClass}" data-working="${isWorking}" ${assignmentDataStr}>${text}</span>
+                        </td>
+                    `;
+                });
+
+                html += `
+                    <td id="total-${index}"><strong>${row.Total_Hours}</strong></td>
+                    <td id="ot-${index}"><span style="color: ${row.OT > 0 ? 'var(--warning)' : 'inherit'}">${row.OT}</span></td>
+                `;
+                
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function showShiftDetails(cell) {
+            const badge = cell.querySelector('.status-badge');
+            const isWorking = badge.getAttribute('data-working') === 'true';
+            
+            if (isWorking) {
+                const type = badge.getAttribute('data-type');
+                const login = badge.getAttribute('data-login');
+                const logout = badge.getAttribute('data-logout');
+                
+                alert(`${type}\nLogin: ${login}\nLogout: ${logout}`);
+            } else {
+                alert('Off - No shift assigned');
+            }
+        }
+
+        function adminAssignShift() {
+            const modal = document.getElementById('assignmentModal');
+            const tbody = document.getElementById('bulkScheduleBody');
+            tbody.innerHTML = '';
+            
+            if (currentAvailableWorkers.length === 0) {
+                alert("No employees available to schedule.");
+                return;
+            }
+
+            currentAvailableWorkers.forEach((w, idx) => {
+                tbody.innerHTML += `
+                    <tr style="transition: background 0.2s; cursor: pointer;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+                        <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <input type="checkbox" id="check_${idx}" value="${w.Name}" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary);">
+                        </td>
+                        <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <strong style="font-size: 1.05rem;">${w.Name}</strong> <br><span style="font-size: 0.8rem; color: var(--success);">${w.Available}h left</span>
+                        </td>
+                        <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <input type="date" id="date_${idx}" style="padding: 0.6rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 6px; font-size: 0.9rem;" onclick="this.showPicker()">
+                        </td>
+                        <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <select id="day_${idx}" style="padding: 0.6rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 6px; font-size: 0.9rem;">
+                                <option value="Sunday">Sunday</option>
+                                <option value="Monday">Monday</option>
+                                <option value="Tuesday">Tuesday</option>
+                                <option value="Wednesday">Wednesday</option>
+                                <option value="Thursday">Thursday</option>
+                                <option value="Friday">Friday</option>
+                                <option value="Saturday">Saturday</option>
+                            </select>
+                        </td>
+                        <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <select id="shift_${idx}" style="padding: 0.6rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 6px; font-size: 0.9rem;" onchange="updateBulkLoginTime(${idx})">
+                                <option value="Morning">Morning</option>
+                                <option value="Evening">Evening</option>
+                                <option value="Night">Night</option>
+                            </select>
+                        </td>
+                        <td style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <input type="text" id="login_${idx}" value="6:00 AM" style="width: 90px; padding: 0.6rem; background: transparent; border: none; color: var(--text-muted); font-size: 0.9rem;" readonly>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            modal.style.display = 'flex';
+        }
+
+        function updateBulkLoginTime(idx) {
+            const shift = document.getElementById(`shift_${idx}`).value;
+            const loginInput = document.getElementById(`login_${idx}`);
+            if (shift === 'Morning') loginInput.value = '6:00 AM';
+            else if (shift === 'Evening') loginInput.value = '2:00 PM';
+            else if (shift === 'Night') loginInput.value = '10:00 PM';
+        }
+
+        function closeModal() {
+            document.getElementById('assignmentModal').style.display = 'none';
+        }
+
+        function saveBulkAssignments() {
+            let scheduled = [];
+            currentAvailableWorkers.forEach((w, idx) => {
+                const checkbox = document.getElementById(`check_${idx}`);
+                if (checkbox && checkbox.checked) {
+                    const dateVal = document.getElementById(`date_${idx}`).value;
+                    const dateStr = dateVal ? ` (${dateVal})` : '';
+                    const day = document.getElementById(`day_${idx}`).value;
+                    const shift = document.getElementById(`shift_${idx}`).value;
+                    const login = document.getElementById(`login_${idx}`).value;
+                    scheduled.push(`• ${w.Name} ➔ ${day}${dateStr}, ${shift} Shift (Login: ${login})`);
+                }
+            });
+
+            if (scheduled.length === 0) {
+                alert("Please tick at least one employee to schedule.");
+                return;
+            }
+
+            alert(`✅ Successfully scheduled the following employees:\n\n${scheduled.join('\n')}\n\n(This action completes the admin bulk scheduling workflow)`);
+            closeModal();
+        }
+
+        function renderChart(groupHours) {
+            const ctx = document.getElementById('workloadChart').getContext('2d');
+            
+            if (workloadChartInstance) {
+                workloadChartInstance.destroy();
+            }
+
+            const labels = Object.keys(groupHours).map(g => `Group ${g}`);
+            const data = Object.values(groupHours);
+
+            workloadChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Hours Assigned',
+                        data: data,
+                        backgroundColor: 'rgba(99, 102, 241, 0.6)',
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: 'rgba(255,255,255,0.5)' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: 'rgba(255,255,255,0.5)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function saveAndDownload() {
+            const rows = document.querySelectorAll('#scheduleTable tbody tr');
+            const scheduleData = [];
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+            rows.forEach((row, index) => {
+                const name = row.querySelector('td:nth-child(1)').innerText;
+                const group = row.querySelector('td:nth-child(2)').innerText;
+                const totalHours = parseFloat(document.getElementById(`total-${index}`).innerText);
+                const ot = parseFloat(document.getElementById(`ot-${index}`).innerText);
+                const maxH = parseFloat(row.dataset.maxH);
+                
+                const rowData = {
+                    'Name': name,
+                    'Group_code': group,
+                    'Total_Hours': totalHours,
+                    'Max_Hours': maxH,
+                    'OT': ot
+                };
+
+                let colIndex = 3;
+                days.forEach(day => {
+                    const badge = row.querySelector(`td:nth-child(${colIndex}) .status-badge`);
+                    rowData[day] = badge.getAttribute('data-working') === 'true' ? 'Working' : 'Off';
+                    colIndex++;
+                });
+
+                scheduleData.push(rowData);
+            });
+
+            try {
+                const response = await fetch('/api/save_schedule', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(scheduleData)
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/api/download';
+                } else {
+                    alert('Error saving schedule: ' + data.error);
+                }
+            } catch (error) {
+                alert('An error occurred while saving.');
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>

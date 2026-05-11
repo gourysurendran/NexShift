@@ -4,3 +4,4 @@ pulp
 openpyxl
 gunicorn
 werkzeug
+numpy

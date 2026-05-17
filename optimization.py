@@ -7,10 +7,15 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def run_optimization(file_path):
+def run_optimization(file_path, absences=None, locked_assignments=None, branch="All", rl_history=None):
     """
     Analyzes workforce data and generates an optimized schedule.
+    Supports real-time rescheduling, Skill-based allocation, RL adaptive weights, and Payroll calculation.
     """
+    if absences is None: absences = []
+    if locked_assignments is None: locked_assignments = {}
+    if rl_history is None: rl_history = {"total_ot": 0, "total_ut": 0, "iterations": 0}
+
     try:
         excel_file = pd.ExcelFile(file_path)
     except Exception as e:
@@ -79,6 +84,17 @@ def run_optimization(file_path):
     df['Min_Hours'] = pd.to_numeric(df['Min_Hours'], errors='coerce').fillna(0)
     df['Max_Hours'] = pd.to_numeric(df['Max_Hours'], errors='coerce').fillna(40)
     
+    # Optional enterprise columns
+    if 'Skill' not in df.columns: df['Skill'] = 'General'
+    if 'Branch' not in df.columns: df['Branch'] = 'Main'
+    if 'Hourly_Rate' not in df.columns: df['Hourly_Rate'] = 500.0
+    
+    # Filter by Branch if not "All"
+    if branch and branch != "All":
+        df = df[df['Branch'].astype(str).str.contains(branch, case=False, na=False)]
+        if df.empty:
+            raise ValueError(f"No employees found for branch '{branch}'.")
+    
     # Ensure all days exist
     for d in standard_days:
         if d not in df.columns:
@@ -115,6 +131,13 @@ def run_optimization(file_path):
     # Filter only relevant days
     df_demand = df_demand[df_demand['Weekday'].isin(standard_days)]
     
+    # Optional human-centric columns
+    if 'Shift_Pref' not in df.columns: df['Shift_Pref'] = 'None'
+    if 'Max_Night_Shifts' not in df.columns: df['Max_Night_Shifts'] = 2
+    
+    df['Max_Night_Shifts'] = pd.to_numeric(df['Max_Night_Shifts'], errors='coerce').fillna(2)
+
+    
     # --- 3. OPTIMIZATION MODEL ---
     groups = df['Group'].unique()
     shifts = ['Morning', 'Evening', 'Night']
@@ -139,8 +162,29 @@ def run_optimization(file_path):
     ut = pulp.LpVariable.dicts("Undertime", df.index, lowBound=0, cat='Continuous')
     
     # Objective: Minimize total deviation from target hours (Workload Balancing)
-    # We also add a small penalty for Night shifts and a penalty for shift imbalance
-    prob += pulp.lpSum([ot[i] + ut[i] for i in df.index])
+    # 6. Reinforcement Learning-Based Adaptive Scheduling
+    # Adjust penalties based on historical RL data (e.g. if OT was previously high, penalize OT more)
+    ot_weight = 1.0
+    ut_weight = 1.0
+    if rl_history['iterations'] > 0:
+        if rl_history['total_ot'] > rl_history['total_ut']:
+            ot_weight = 1.2
+            ut_weight = 0.8
+        elif rl_history['total_ut'] > rl_history['total_ot']:
+            ot_weight = 0.8
+            ut_weight = 1.2
+
+    obj_terms = [ot_weight * ot[i] + ut_weight * ut[i] for i in df.index]
+    
+    # Shift preferences reward
+    for i in df.index:
+        pref = str(df.loc[i, 'Shift_Pref']).strip().capitalize()
+        if pref in shifts:
+            for d in standard_days:
+                # Reward (negative penalty) for assigning preferred shift
+                obj_terms.append(-0.5 * x[(i, d, pref)])
+                
+    prob += pulp.lpSum(obj_terms)
     
     # Constraints
     for d in standard_days:
@@ -178,21 +222,58 @@ def run_optimization(file_path):
         for d in standard_days:
             prob += pulp.lpSum([x[(i, d, s)] for s in shifts]) <= 1
             
-            # 4. Respect 'NW' (Not Working)
+            # 4. Respect 'NW' (Not Working) and absences
             avail_val = str(df.loc[i, d]).strip().upper()
-            if avail_val == 'NW' or avail_val == 'OFF' or avail_val == '0':
+            emp_name = str(df.loc[i, 'Name'])
+            
+            # Check absences (case-insensitive)
+            is_absent = any(str(a).strip().lower() == emp_name.lower() for a in absences)
+            
+            # Check locked assignments
+            locked_shift = locked_assignments.get(f"{emp_name}_{d}")
+            
+            if avail_val == 'NW' or avail_val == 'OFF' or avail_val == '0' or is_absent:
                 for s in shifts:
                     prob += x[(i, d, s)] == 0
+            elif locked_shift in shifts:
+                for s in shifts:
+                    if s == locked_shift:
+                        prob += x[(i, d, s)] == 1
+                    else:
+                        prob += x[(i, d, s)] == 0
                     
-        # 5. Avoid consecutive night shifts
+        # 5. Burnout Prevention & Sustainable Scheduling
+        # 5a. Max night shifts per week
+        prob += pulp.lpSum([x[(i, d, 'Night')] for d in standard_days]) <= df.loc[i, 'Max_Night_Shifts']
+        
+        # 5b. Avoid consecutive night shifts
         for day_idx in range(len(standard_days) - 1):
             prob += x[(i, standard_days[day_idx], 'Night')] + x[(i, standard_days[day_idx+1], 'Night')] <= 1
+            
+        # 5c. Minimum Rest Hours (12 hours between shifts across consecutive days)
+        # Morning: 6-14, Evening: 14-22, Night: 22-6
+        # Evening -> Morning: 8 hrs rest (Invalid)
+        # Night -> Morning: 0 hrs rest (Invalid)
+        # Night -> Evening: 8 hrs rest (Invalid)
+        for day_idx in range(len(standard_days) - 1):
+            d1 = standard_days[day_idx]
+            d2 = standard_days[day_idx+1]
+            prob += x[(i, d1, 'Evening')] + x[(i, d2, 'Morning')] <= 1
+            prob += x[(i, d1, 'Night')] + x[(i, d2, 'Morning')] <= 1
+            prob += x[(i, d1, 'Night')] + x[(i, d2, 'Evening')] <= 1
+            
+        # 5d. Fair Weekend Rotation (Max 1 weekend shift per employee)
+        weekend_days = [d for d in ['Saturday', 'Sunday'] if d in standard_days]
+        if weekend_days:
+            prob += pulp.lpSum([x[(i, d, s)] for d in weekend_days for s in shifts]) <= 1
             
         # 6. Total Hours Constraints
         total_hours = pulp.lpSum([x[(i, d, s)] * SHIFT_HOURS for d in standard_days for s in shifts])
         min_h = df.loc[i, 'Min_Hours']
         max_h = df.loc[i, 'Max_Hours']
         
+        # 7. Workload Balancing & Predictive Overtime Control
+        # Heavy penalty on OT handled in objective (ot variable)
         prob += total_hours - ot[i] <= max_h
         prob += total_hours + ut[i] >= min_h
 
@@ -215,6 +296,7 @@ def run_optimization(file_path):
     group_hours = {str(g): 0 for g in groups}
     extra_workers = []
     available_workers = []
+    preferences_met = 0
     
     for i in df.index:
         emp_name = str(df.loc[i, 'Name'])
@@ -241,6 +323,11 @@ def run_optimization(file_path):
                     "Login": shift_details[assigned]['Login'],
                     "Logout": shift_details[assigned]['Logout']
                 }
+                
+                # Check if preferred shift was granted
+                pref = str(df.loc[i, 'Shift_Pref']).strip().capitalize()
+                if assigned == pref:
+                    preferences_met += 1
             else:
                 row[d] = 'Off'
                 shift_assignments[f"{emp_name}_{d}"] = None
@@ -248,6 +335,15 @@ def run_optimization(file_path):
         row['Total_Hours'] = float(emp_total_hours)
         row['OT'] = float(pulp.value(ot[i]) or 0)
         row['UT'] = float(pulp.value(ut[i]) or 0)
+        
+        # 3. Payroll Integration
+        hourly_rate = float(df.loc[i, 'Hourly_Rate'])
+        base_pay = row['Total_Hours'] * hourly_rate
+        ot_pay = row['OT'] * (hourly_rate * 1.5)
+        row['Base_Pay'] = base_pay
+        row['OT_Pay'] = ot_pay
+        row['Total_Pay'] = base_pay + ot_pay
+        
         schedule.append(row)
         
         if group in group_hours:
@@ -284,6 +380,8 @@ def run_optimization(file_path):
         "schedule": schedule,
         "shift_assignments": shift_assignments,
         "extra_workers": extra_workers,
-        "available_workers": available_workers
+        "available_workers": available_workers,
+        "preferences_met": preferences_met,
+        "total_payroll": sum(r['Total_Pay'] for r in schedule)
     }
 

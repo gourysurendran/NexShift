@@ -2,6 +2,8 @@ import os
 import uuid
 import logging
 import traceback
+import json
+from datetime import datetime
 from flask import Flask, render_template, jsonify, request, send_file
 import pandas as pd
 from werkzeug.utils import secure_filename
@@ -22,9 +24,76 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB limit
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('data', exist_ok=True)
 
+# Enterprise State (In-Memory for Simulation)
+enterprise_state = {
+    "leaves": [
+        {"id": "leave-1", "emp_name": "John", "date": "2026-05-18", "status": "Pending"},
+        {"id": "leave-2", "emp_name": "Alice", "date": "2026-05-19", "status": "Pending"},
+        {"id": "leave-3", "emp_name": "Bob", "date": "2026-05-20", "status": "Approved"}
+    ],
+    "bids": [],
+    "biometric_logs": [],
+    "rl_history": {"total_ot": 0, "total_ut": 0, "iterations": 0}
+}
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# --- Chatbot API ---
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    msg = request.json.get('message', '').lower()
+    response = "I'm NexShift AI. How can I help?"
+    if 'schedule' in msg: response = "Your upcoming shifts are optimized and available in the Dashboard tab."
+    elif 'leave' in msg: response = "You can submit a leave request in the Leave Management portal."
+    elif 'pay' in msg or 'salary' in msg: response = "Your projected payroll is calculated based on completed shifts and OT. Check the Payroll tab."
+    elif 'bid' in msg: response = "Available shifts for bidding are in the Shift Bidding tab."
+    return jsonify({"response": response})
+
+# --- Biometrics API ---
+@app.route('/api/biometric', methods=['POST'])
+def biometric():
+    data = request.json
+    emp_id = data.get('emp_id')
+    action = data.get('action') # 'check_in' or 'check_out'
+    log = {"emp_id": emp_id, "action": action, "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+    enterprise_state['biometric_logs'].append(log)
+    return jsonify({"success": True, "log": log})
+
+# --- Leave Management API ---
+@app.route('/api/leaves', methods=['GET', 'POST', 'PUT'])
+def handle_leaves():
+    if request.method == 'POST':
+        leave = request.json
+        leave['id'] = str(uuid.uuid4())
+        leave['status'] = 'Pending'
+        enterprise_state['leaves'].append(leave)
+        return jsonify({"success": True, "leave": leave})
+    elif request.method == 'PUT':
+        data = request.json
+        for l in enterprise_state['leaves']:
+            if l['id'] == data.get('id'):
+                l['status'] = data.get('status')
+        return jsonify({"success": True})
+    return jsonify({"leaves": enterprise_state['leaves']})
+
+# --- Shift Bidding API ---
+@app.route('/api/bids', methods=['GET', 'POST', 'PUT'])
+def handle_bids():
+    if request.method == 'POST':
+        bid = request.json
+        bid['id'] = str(uuid.uuid4())
+        bid['status'] = 'Pending'
+        enterprise_state['bids'].append(bid)
+        return jsonify({"success": True, "bid": bid})
+    elif request.method == 'PUT':
+        data = request.json
+        for b in enterprise_state['bids']:
+            if b['id'] == data.get('id'):
+                b['status'] = data.get('status')
+        return jsonify({"success": True})
+    return jsonify({"bids": enterprise_state['bids']})
 
 @app.route('/api/optimize', methods=['POST'])
 def optimize():
@@ -48,12 +117,36 @@ def optimize():
                 file_path = upload_path
                 logger.info(f"File uploaded successfully: {unique_filename}")
         
+        # Check if JSON payload was sent (for absences/locked_assignments)
+        absences = []
+        locked_assignments = {}
+        branch = "All"
+        if 'settings' in request.form:
+            try:
+                settings = json.loads(request.form['settings'])
+                absences = settings.get('absences', [])
+                locked_assignments = settings.get('locked_assignments', {})
+                branch = settings.get('branch', 'All')
+                
+                # Auto-add approved leaves to absences
+                approved_leaves = [l['emp_name'] for l in enterprise_state['leaves'] if l['status'] == 'Approved']
+                absences.extend(approved_leaves)
+                
+            except Exception as e:
+                logger.warning(f"Could not parse settings: {e}")
+
         if not os.path.exists(file_path):
             return jsonify({"error": f"Dataset file not found at {file_path}. Please upload a file."}), 404
 
         # Run optimization
-        logger.info(f"Running optimization on: {file_path}")
-        data = run_optimization(file_path)
+        logger.info(f"Running optimization on: {file_path} with absences={absences}, branch={branch}")
+        data = run_optimization(file_path, absences=absences, locked_assignments=locked_assignments, branch=branch, rl_history=enterprise_state['rl_history'])
+        
+        # Update RL History
+        enterprise_state['rl_history']['total_ot'] += data.get('total_ot', 0)
+        enterprise_state['rl_history']['total_ut'] += data.get('total_ut', 0)
+        enterprise_state['rl_history']['iterations'] += 1
+        
         logger.info("Optimization completed successfully.")
         
         # Log summary for debugging

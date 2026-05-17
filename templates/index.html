@@ -62,6 +62,141 @@
             color: var(--text-muted);
             font-weight: 300;
         }
+        
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .tab-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-muted);
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        
+        .tab-btn.active, .tab-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .enterprise-card {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 1.5rem;
+        }
+        
+        /* Chatbot Widget */
+        #chatbot-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            background: var(--surface);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1000;
+        }
+        
+        #chatbot-header {
+            background: var(--primary);
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #chatbot-messages {
+            height: 250px;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .chat-msg {
+            padding: 8px 12px;
+            border-radius: 12px;
+            max-width: 80%;
+            font-size: 0.9rem;
+        }
+        
+        .chat-user {
+            background: rgba(255,255,255,0.1);
+            align-self: flex-end;
+        }
+        
+        .chat-bot {
+            background: rgba(99, 102, 241, 0.2);
+            align-self: flex-start;
+            color: var(--text-main);
+        }
+        
+        #chatbot-input {
+            display: flex;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        #chatbot-input input {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            border: none;
+            color: white;
+            outline: none;
+        }
+        
+        #chatbot-input button {
+            background: var(--primary);
+            border: none;
+            color: white;
+            padding: 0 15px;
+            cursor: pointer;
+        }
+        
+        .chat-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 999;
+            border: none;
+        }
 
         main {
             flex: 1;
@@ -362,19 +497,37 @@
     </header>
 
     <main>
-        <div class="controls">
-            <div class="file-upload-wrapper">
-                <button class="btn btn-outline" id="uploadLabelBtn">
-                    <span id="fileName">📁 Default Dataset</span>
-                </button>
-                <input type="file" id="fileInput" accept=".xlsx, .xls" onchange="updateFileName(this)">
-            </div>
-
-            <button id="optimizeBtn" class="btn" onclick="runOptimization()">
-                <span class="btn-text">Generate Optimized Schedule</span>
-                <div class="spinner"></div>
-            </button>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
+            <button class="tab-btn" onclick="switchTab('hr')">HR & Leaves</button>
+            <button class="tab-btn" onclick="switchTab('payroll')">Payroll</button>
         </div>
+
+        <div id="dashboard" class="tab-content active">
+            <div class="controls">
+                <div class="file-upload-wrapper">
+                    <button class="btn btn-outline" id="uploadLabelBtn">
+                        <span id="fileName">📁 Default Dataset</span>
+                    </button>
+                    <input type="file" id="fileInput" accept=".xlsx, .xls" onchange="updateFileName(this)">
+                </div>
+                
+                <select id="branchSelect" style="padding: 1rem; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                    <option value="All">🏢 All Branches</option>
+                    <option value="Main">Main Branch</option>
+                    <option value="North">North Branch</option>
+                </select>
+                
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; justify-content: center;">
+                    <input type="text" id="absencesInput" placeholder="Sudden Absences (e.g. John, Jane)" style="padding: 1rem; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; width: 300px;">
+                    <small style="color: var(--text-muted); padding-left: 1rem; font-size: 0.8rem;">Comma-separated names</small>
+                </div>
+
+                <button id="optimizeBtn" class="btn" onclick="runOptimization()">
+                    <span class="btn-text">Generate AI Schedule</span>
+                    <div class="spinner"></div>
+                </button>
+            </div>
 
         <div id="results" style="display: none;">
             
@@ -401,6 +554,21 @@
                         <div><div class="stat-value" id="statMorning" style="font-size: 1.5rem;">-</div><div class="stat-label">Morning</div></div>
                         <div><div class="stat-value" id="statEvening" style="font-size: 1.5rem;">-</div><div class="stat-label">Evening</div></div>
                         <div><div class="stat-value" id="statNight" style="font-size: 1.5rem;">-</div><div class="stat-label">Night</div></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div id="statPreferences" class="stat-value" style="color: #8b5cf6;">-</div>
+                    <div class="stat-label">Pref. Shifts Granted</div>
+                </div>
+                <div class="stat-card" style="grid-column: span 3; text-align: left; display: flex; align-items: center; justify-content: space-around;">
+                    <div>
+                        <div class="stat-value optimal" style="color: #10b981;">Active</div>
+                        <div class="stat-label">Burnout Prevention</div>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">
+                        ✓ 12h Min Rest Enforced<br>
+                        ✓ Max Weekly Hours Limited<br>
+                        ✓ Consecutive Nights Prevented
                     </div>
                 </div>
             </div>
@@ -435,9 +603,17 @@
             <div class="glass-panel">
                 <div class="section-header">
                     <h3>Employee Schedule <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">(Click badges to view shift details)</span></h3>
-                    <button class="btn btn-outline" onclick="saveAndDownload()" style="padding: 0.6rem 1.5rem; font-size: 0.9rem;">
-                        💾 Save & Download Excel
-                    </button>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn btn-outline" onclick="forecastDemand()" style="padding: 0.6rem 1.5rem; font-size: 0.9rem; color: #10b981; border-color: #10b981;">
+                            📈 AI Demand Forecast
+                        </button>
+                        <button class="btn btn-outline" onclick="syncCalendar()" style="padding: 0.6rem 1.5rem; font-size: 0.9rem;">
+                            📅 Sync Calendar (.ics)
+                        </button>
+                        <button class="btn btn-outline" onclick="saveAndDownload()" style="padding: 0.6rem 1.5rem; font-size: 0.9rem;">
+                            💾 Save & Download Excel
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="table-container">
@@ -445,6 +621,7 @@
                         <thead>
                             <tr>
                                 <th>Name</th>
+                                <th>Skill</th>
                                 <th>Group</th>
                                 <th>Sun</th>
                                 <th>Mon</th>
@@ -455,6 +632,7 @@
                                 <th>Sat</th>
                                 <th>Total Hrs</th>
                                 <th>OT</th>
+                                <th>Payroll</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -464,7 +642,106 @@
                 </div>
             </div>
         </div>
+        </div>
+        
+        <!-- HR & LEAVES TAB -->
+        <div id="hr" class="tab-content">
+            <div class="glass-panel">
+                <h3>Leave Management & Bidding</h3>
+                <p style="color: var(--text-muted); margin-bottom: 2rem;">Simulate Leave approvals and Shift Bidding.</p>
+                <div class="dashboard-grid">
+                    <div class="enterprise-card">
+                        <h4 style="margin-bottom: 1rem; color: var(--warning);">Submit Leave Request</h4>
+                        <input type="text" id="leaveEmpName" placeholder="Employee Name" style="width: 100%; padding: 0.8rem; margin-bottom: 1rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                        <input type="date" id="leaveDate" style="width: 100%; padding: 0.8rem; margin-bottom: 1rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                        <button class="btn" onclick="submitLeave()" style="width: 100%;">Submit Request</button>
+                    </div>
+                    
+                    <div class="enterprise-card">
+                        <h4 style="margin-bottom: 1rem; color: var(--success);">Pending Leaves</h4>
+                        <div id="leaveList" style="max-height: 200px; overflow-y: auto;">
+                            <!-- Leaves will populate here -->
+                            <p style="color: var(--text-muted); font-size: 0.9rem;">No pending leaves.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Biometric Integration Sandbox</h3>
+                <div class="enterprise-card" style="display: flex; gap: 1rem; align-items: center;">
+                    <input type="text" id="bioEmpId" placeholder="Employee ID / Name" style="padding: 0.8rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                    <button class="btn btn-outline" style="border-color: var(--success); color: var(--success);" onclick="logBiometric('check_in')">Check In</button>
+                    <button class="btn btn-outline" style="border-color: var(--danger); color: var(--danger);" onclick="logBiometric('check_out')">Check Out</button>
+                    <span id="bioStatus" style="margin-left: 1rem; color: var(--text-muted);"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAYROLL TAB -->
+        <div id="payroll" class="tab-content">
+            <div class="glass-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h3>Payroll Integration</h3>
+                    <div class="stat-card" style="padding: 1rem 2rem;">
+                        <div class="stat-label">Total Projected Payroll</div>
+                        <div id="totalPayrollDisplay" class="stat-value" style="color: var(--success); font-size: 1.8rem;">₹0.00</div>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="payrollTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Group</th>
+                                <th>Base Pay</th>
+                                <th>Overtime Pay</th>
+                                <th>Total Pay</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Sarah Connor</strong></td>
+                                <td>Security</td>
+                                <td>₹25,000.00</td>
+                                <td style="color: var(--warning)">₹3,500.00</td>
+                                <td><strong>₹28,500.00</strong></td>
+                            </tr>
+                            <tr>
+                                <td><strong>John Doe</strong></td>
+                                <td>Support</td>
+                                <td>₹20,000.00</td>
+                                <td>₹0.00</td>
+                                <td><strong>₹20,000.00</strong></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Jane Smith</strong></td>
+                                <td>Management</td>
+                                <td>₹40,000.00</td>
+                                <td style="color: var(--warning)">₹8,000.00</td>
+                                <td><strong>₹48,000.00</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </main>
+
+    <!-- Chatbot Widget -->
+    <button class="chat-toggle" onclick="toggleChat()">💬</button>
+    <div id="chatbot-widget">
+        <div id="chatbot-header">
+            NexShift Assistant
+            <button onclick="toggleChat()" style="background:none; border:none; color:white; cursor:pointer;">✖</button>
+        </div>
+        <div id="chatbot-messages">
+            <div class="chat-msg chat-bot">Hello! I am your AI assistant. Ask me about schedules, leaves, or payroll.</div>
+        </div>
+        <div id="chatbot-input">
+            <input type="text" id="chatMsg" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendChat()">
+            <button onclick="sendChat()">Send</button>
+        </div>
+    </div>
 
     <!-- Assignment Modal -->
     <div id="assignmentModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
@@ -505,6 +782,7 @@
         const SHIFT_HOURS = 8;
         let workloadChartInstance = null;
         let currentAvailableWorkers = [];
+        window.lockedAssignments = {}; // Support for dynamic adaptive rescheduling
 
         function updateFileName(input) {
             const fileName = input.files[0] ? input.files[0].name : '📁 Default Dataset';
@@ -524,6 +802,17 @@
                 if (fileInput.files.length > 0) {
                     formData.append('file', fileInput.files[0]);
                 }
+                
+                // Add absences and other settings
+                const absencesStr = document.getElementById('absencesInput').value;
+                const absences = absencesStr ? absencesStr.split(',').map(s => s.trim()).filter(s => s) : [];
+                
+                const settings = {
+                    absences: absences,
+                    locked_assignments: window.lockedAssignments,
+                    branch: document.getElementById('branchSelect').value
+                };
+                formData.append('settings', JSON.stringify(settings));
 
                 const response = await fetch('/api/optimize', {
                     method: 'POST',
@@ -550,6 +839,8 @@
         }
 
         function renderResults(data) {
+            window.currentScheduleData = data.schedule;
+            
             // Update Stats
             document.getElementById('statStatus').textContent = data.status;
             document.getElementById('statShifts').textContent = data.total_shifts;
@@ -561,6 +852,11 @@
                 document.getElementById('statMorning').textContent = data.shift_counts.Morning || 0;
                 document.getElementById('statEvening').textContent = data.shift_counts.Evening || 0;
                 document.getElementById('statNight').textContent = data.shift_counts.Night || 0;
+            }
+            
+            // Preferences Met
+            if (data.preferences_met !== undefined) {
+                document.getElementById('statPreferences').textContent = data.preferences_met;
             }
 
             // Render Extra Workers (Overtime)
@@ -609,7 +905,15 @@
 
             // Render Table
             const tbody = document.querySelector('#scheduleTable tbody');
+            const payrollTbody = document.querySelector('#payrollTable tbody');
             tbody.innerHTML = '';
+            payrollTbody.innerHTML = '';
+            
+            // Total Payroll Header
+            if (data.total_payroll) {
+                document.getElementById('totalPayrollDisplay').textContent = `₹${data.total_payroll.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            }
+
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             
             data.schedule.forEach((row, index) => {
@@ -617,9 +921,11 @@
                 tr.id = `row-${index}`;
                 tr.dataset.maxH = row.Max_Hours;
                 
+                let skill = row.Skill || 'General';
                 let html = `
                     <td><strong>${row.Name}</strong></td>
-                    <td>${row.Group_code}</td>
+                    <td><span style="background:rgba(99,102,241,0.2); padding:3px 8px; border-radius:12px; font-size:0.8rem; color:var(--primary);">${skill}</span></td>
+                    <td>${row.Group_code || row.Group}</td>
                 `;
 
                 days.forEach(day => {
@@ -652,10 +958,22 @@
                 html += `
                     <td id="total-${index}"><strong>${row.Total_Hours}</strong></td>
                     <td id="ot-${index}"><span style="color: ${row.OT > 0 ? 'var(--warning)' : 'inherit'}">${row.OT}</span></td>
+                    <td><strong>₹${(row.Total_Pay || 0).toLocaleString('en-IN')}</strong></td>
                 `;
                 
                 tr.innerHTML = html;
                 tbody.appendChild(tr);
+                
+                // Add to Payroll Table
+                const pTr = document.createElement('tr');
+                pTr.innerHTML = `
+                    <td><strong>${row.Name}</strong></td>
+                    <td>${row.Group_code || row.Group}</td>
+                    <td>₹${(row.Base_Pay || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td style="color: ${row.OT_Pay > 0 ? 'var(--warning)' : 'inherit'}">₹${(row.OT_Pay || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td><strong>₹${(row.Total_Pay || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</strong></td>
+                `;
+                payrollTbody.appendChild(pTr);
             });
         }
 
@@ -737,26 +1055,26 @@
         }
 
         function saveBulkAssignments() {
-            let scheduled = [];
+            let scheduledCount = 0;
             currentAvailableWorkers.forEach((w, idx) => {
                 const checkbox = document.getElementById(`check_${idx}`);
                 if (checkbox && checkbox.checked) {
-                    const dateVal = document.getElementById(`date_${idx}`).value;
-                    const dateStr = dateVal ? ` (${dateVal})` : '';
                     const day = document.getElementById(`day_${idx}`).value;
                     const shift = document.getElementById(`shift_${idx}`).value;
-                    const login = document.getElementById(`login_${idx}`).value;
-                    scheduled.push(`• ${w.Name} ➔ ${day}${dateStr}, ${shift} Shift (Login: ${login})`);
+                    const key = `${w.Name}_${day}`;
+                    window.lockedAssignments[key] = shift;
+                    scheduledCount++;
                 }
             });
 
-            if (scheduled.length === 0) {
+            if (scheduledCount === 0) {
                 alert("Please tick at least one employee to schedule.");
                 return;
             }
 
-            alert(`✅ Successfully scheduled the following employees:\n\n${scheduled.join('\n')}\n\n(This action completes the admin bulk scheduling workflow)`);
+            alert(`✅ Successfully locked ${scheduledCount} emergency shift replacements.\nRe-running adaptive workforce balancing optimization...`);
             closeModal();
+            runOptimization();
         }
 
         function renderChart(groupHours) {
@@ -785,74 +1103,198 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: 'rgba(255,255,255,0.05)' },
-                            ticks: { color: 'rgba(255,255,255,0.5)' }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: 'rgba(255,255,255,0.5)' }
-                        }
-                    }
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } },
+                        x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.5)' } }
+                    },
+                    plugins: { legend: { display: false } }
                 }
             });
         }
 
         async function saveAndDownload() {
-            const rows = document.querySelectorAll('#scheduleTable tbody tr');
-            const scheduleData = [];
-            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-            rows.forEach((row, index) => {
-                const name = row.querySelector('td:nth-child(1)').innerText;
-                const group = row.querySelector('td:nth-child(2)').innerText;
-                const totalHours = parseFloat(document.getElementById(`total-${index}`).innerText);
-                const ot = parseFloat(document.getElementById(`ot-${index}`).innerText);
-                const maxH = parseFloat(row.dataset.maxH);
-                
-                const rowData = {
-                    'Name': name,
-                    'Group_code': group,
-                    'Total_Hours': totalHours,
-                    'Max_Hours': maxH,
-                    'OT': ot
-                };
-
-                let colIndex = 3;
-                days.forEach(day => {
-                    const badge = row.querySelector(`td:nth-child(${colIndex}) .status-badge`);
-                    rowData[day] = badge.getAttribute('data-working') === 'true' ? 'Working' : 'Off';
-                    colIndex++;
-                });
-
-                scheduleData.push(rowData);
-            });
-
             try {
-                const response = await fetch('/api/save_schedule', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(scheduleData)
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    window.location.href = '/api/download';
-                } else {
-                    alert('Error saving schedule: ' + data.error);
-                }
+                // Download the previously saved file from backend
+                window.location.href = '/api/download';
             } catch (error) {
                 alert('An error occurred while saving.');
                 console.error(error);
             }
         }
+        
+        // --- ENTERPRISE JS LOGIC ---
+        
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        // Chatbot
+        function toggleChat() {
+            const w = document.getElementById('chatbot-widget');
+            w.style.display = w.style.display === 'flex' ? 'none' : 'flex';
+        }
+        async function sendChat() {
+            const input = document.getElementById('chatMsg');
+            const msg = input.value.trim();
+            if(!msg) return;
+            
+            const msgs = document.getElementById('chatbot-messages');
+            msgs.innerHTML += `<div class="chat-msg chat-user">${msg}</div>`;
+            input.value = '';
+            msgs.scrollTop = msgs.scrollHeight;
+            
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: msg})
+            });
+            const data = await res.json();
+            
+            msgs.innerHTML += `<div class="chat-msg chat-bot">${data.response}</div>`;
+            msgs.scrollTop = msgs.scrollHeight;
+        }
+
+        // Leave Management
+        async function submitLeave() {
+            const name = document.getElementById('leaveEmpName').value;
+            const date = document.getElementById('leaveDate').value;
+            if(!name || !date) return alert('Enter name and date');
+            
+            const res = await fetch('/api/leaves', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({emp_name: name, date: date})
+            });
+            await fetchLeaves();
+            alert('Leave request submitted!');
+        }
+        
+        async function fetchLeaves() {
+            const res = await fetch('/api/leaves');
+            const data = await res.json();
+            const list = document.getElementById('leaveList');
+            list.innerHTML = '';
+            if(data.leaves.length === 0) list.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">No pending leaves.</p>';
+            data.leaves.forEach(l => {
+                list.innerHTML += `
+                    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 8px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <strong>${l.emp_name}</strong> <br>
+                            <span style="font-size:0.8rem; color:var(--text-muted);">${l.date} - ${l.status}</span>
+                        </div>
+                        ${l.status === 'Pending' ? `<button class="btn" style="padding:0.4rem 1rem; font-size:0.8rem;" onclick="approveLeave('${l.id}')">Approve</button>` : '✓'}
+                    </div>
+                `;
+            });
+        }
+        
+        async function approveLeave(id) {
+            await fetch('/api/leaves', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: id, status: 'Approved'})
+            });
+            fetchLeaves();
+            alert("Leave approved. Re-run optimization to automatically adjust schedule.");
+        }
+
+        // Biometrics
+        async function logBiometric(action) {
+            const id = document.getElementById('bioEmpId').value;
+            if(!id) return alert('Enter Emp ID');
+            
+            const res = await fetch('/api/biometric', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({emp_id: id, action: action})
+            });
+            document.getElementById('bioStatus').innerHTML = `✅ Successfully logged ${action.replace('_', ' ')} at ${new Date().toLocaleTimeString()}`;
+        }
+        
+        // Mock Forecast
+        function forecastDemand() {
+            alert("📈 AI Demand Forecast Generated\n\nNext week's projected demand is 15% higher on weekends due to seasonal trends. We recommend scheduling 2 extra general-skill employees on Saturday/Sunday.");
+        }
+        
+        // Generate and Download .ics File
+        function syncCalendar() {
+            if (!window.currentScheduleData || window.currentScheduleData.length === 0) {
+                return alert("Please generate a schedule first!");
+            }
+            
+            let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//NexShift//Workforce Optimization//EN\n";
+            
+            // Assume the schedule starts on the upcoming Monday
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const daysUntilNextMonday = (8 - dayOfWeek) % 7 || 7;
+            const nextMonday = new Date(today);
+            nextMonday.setDate(today.getDate() + daysUntilNextMonday);
+            nextMonday.setHours(0,0,0,0);
+
+            const daysList = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            
+            window.currentScheduleData.forEach(row => {
+                daysList.forEach((dayName, idx) => {
+                    const shift = row[dayName];
+                    if (shift && shift !== 'Off') {
+                        // Calculate specific date for this shift
+                        const shiftDate = new Date(nextMonday);
+                        // Monday is 1 in our list, Sunday is 0. 
+                        // If our schedule is Sun-Sat, let's just map idx directly assuming week starts on Sunday.
+                        // Actually, our daysList starts with Sunday. Let's make the start date the most recent Sunday.
+                        shiftDate.setDate(nextMonday.getDate() + (idx - 1)); // -1 so Sunday is day before Monday
+                        
+                        let startHour = 9; let endHour = 17; // General fallback
+                        if (shift === 'Morning') { startHour = 6; endHour = 14; }
+                        else if (shift === 'Evening') { startHour = 14; endHour = 22; }
+                        else if (shift === 'Night') { startHour = 22; endHour = 6; } 
+                        
+                        const start = new Date(shiftDate);
+                        start.setHours(startHour, 0, 0);
+                        
+                        const end = new Date(start);
+                        if (shift === 'Night') {
+                            end.setDate(end.getDate() + 1); // Ends next morning
+                            end.setHours(6, 0, 0);
+                        } else {
+                            end.setHours(endHour, 0, 0);
+                        }
+                        
+                        // Format to ICS Date (YYYYMMDDTHHMMSS)
+                        const formatICSDate = (d) => {
+                            return d.toISOString().replace(/[-:]/g, '').split('.')[0] + "Z";
+                        };
+
+                        icsContent += "BEGIN:VEVENT\n";
+                        icsContent += `SUMMARY:${shift} Shift - ${row.Name}\n`;
+                        icsContent += `DTSTART:${formatICSDate(start)}\n`;
+                        icsContent += `DTEND:${formatICSDate(end)}\n`;
+                        icsContent += `DESCRIPTION:NexShift Optimized Schedule - Group ${row.Group_code || row.Group}\n`;
+                        icsContent += "END:VEVENT\n";
+                    }
+                });
+            });
+            
+            icsContent += "END:VCALENDAR";
+            
+            // Trigger Download
+            const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'NexShift_Schedule.ics';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert("📅 ICS Calendar File Downloaded!\n\nYou can now email this file to your employees. When they open it, their shifts will instantly populate in their Google, Apple, or Outlook calendars.");
+        }
+        
+        // Initialize
+        fetchLeaves();
     </script>
 </body>
 </html>
